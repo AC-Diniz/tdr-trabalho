@@ -1,0 +1,233 @@
+---
+title: "Relatório de Internações"
+subtitle: "Internações nos hospitais de uma região de saúde Unidade de observação: hospital"
+author: Ananda Cristina Diniz
+lang: pt-BR
+format: 
+  html:
+    embed-resources: true
+    code-fold: false
+
+---
+
+# Exercício 1: O documento e a leitura
+
+Nesse exercício, será feita a leitura inicial dos dados utilizando o pacote `readr`, a fim de identificar o separador decimal, codificação, tipos de colunas e valores ausentes (`NA`).
+
+```{r}
+# Carregando os pacotes
+library(tidyverse)
+library(readr)
+
+# 1. Leitura do cadastro
+cadastro <- read_csv2(
+  file = "dados/cadastro.csv",
+  locale = locale(encoding = "ISO-8859-1"),
+  na = c("", "NA", "N/A")
+)
+
+cadastro
+
+# 2. Leitura do primeiro arquivo anual
+ano_primeiro <- read_csv2(
+  file = "dados/internacoes_2023.csv",
+  locale = locale(decimal_mark = "."),
+  col_types = cols(
+    codigo = col_character(),
+    .default = col_double()
+  ),
+  na = c("", "NA", "-", "NAO_INFORMADO")
+)
+
+ano_primeiro
+```
+
+# Exercício 2: Arrumar a tabela 
+
+O objetivo desse exercício é converter a tabela para forma longa, com uma linha por unidade e mês, e dar à coluna de valores o nome do que ela mede, e não `value`. 
+
+```{r}
+library(tidyverse)
+
+# 1. Definição dos níveis dos meses
+meses_nivel <- c("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+
+# 2. Transformação para a forma longa
+internacoes_longa <- ano_primeiro |>
+  pivot_longer(
+    cols = jan:dez,
+    names_to = "mes",
+    values_to = "internacoes"
+  ) |>
+  mutate(
+    mes = factor(mes, levels = meses_nivel)
+  )
+
+internacoes_longa
+
+# 3. Contagem das linhas da tabela longa e valores ausentes
+n_linhas <- nrow(internacoes_longa)
+n_ausentes <- sum(is.na(internacoes_longa$internacoes))
+
+n_linhas
+n_ausentes
+```
+## Comparação com o `LEIA-ME.txt`
+No documento `LEIA-ME.txt`, o número de unidades com medições corresponde a 8, enquanto que número de linhas da tabela longa é `r n_linhas`, ou seja, 12 vezes o valor das unidades com medições.
+Além disso, o número de valores ausentes (`r n_ausentes`) é igual a "meses sem registro" do primeiro ano no `LEIA-ME.txt`.
+
+# Exercício 3: Juntar ao cadastro
+O objetivo é juntar as tabelas `cadastro.csv` e `internacoes_longa`, mantendo todas as linhas da tabela longa. Além disso, na tabela juntada, deve ser criada a **medida relativa** com o `mutate()`.
+
+```{r}
+library(tidyverse)
+
+# 1. Juntando a tabela longa ao cadastro
+internacoes_cadastro <- internacoes_longa |>
+  left_join(cadastro, by = "codigo", relationship = "many-to-one")
+
+internacoes_cadastro
+
+# 2. Conferindo se a junção não mudou o número de linhas
+nrow(internacoes_longa) == nrow(internacoes_cadastro)
+
+# 3. Criando a medida relativa: valor de cada mês por porte da unidade
+internacoes_cadastro <- internacoes_cadastro |>
+  mutate(medida_relativa = internacoes/ leitos)
+internacoes_cadastro
+
+# 4. Indentificando qual unidade do cadastro não tem medição alguma
+unidade_sem_medicao <- cadastro |>
+  anti_join(internacoes_longa, by = "codigo")
+
+unidade_sem_medicao
+
+```
+
+## Consolidação das respostas
+Após a junção das tabelas, o número de linhas não se alterou, e a unidade do cadastro sem medição alguma é `r unidade_sem_medicao`.
+
+# Exercício 4: Resumir por grupo
+O objetivo é produzir dois resumos do ano, com a tabela do exercício anterior: **por unidade** e **por categoria**.
+
+```{r}
+library(tidyverse)
+
+# 1. Resumo por unidade
+resumo_unidade <- internacoes_cadastro |>
+  mutate(
+    internacoes = replace_na(internacoes, 0), #aqui foi feito o tratamento dos valores ausentes (NA), substituindo-os por 0. Assim, os meses sem registro de internação correspondem a zero internações no período. A decisão afeta o "total_ano" e a "media_relativa", mas não afeta a contagem de unidades ou identificação das categorias
+    medida_relativa = replace_na(medida_relativa, 0)
+  ) |>
+  group_by(codigo, nome, natureza) |>
+  summarise(
+    meses_registro = sum(internacoes >= 0),
+    total_ano = sum(internacoes),
+    media_relativa = mean(medida_relativa),
+    .groups = "drop"
+  ) |>
+  arrange(desc(media_relativa))
+
+resumo_unidade
+
+# 2. Resumo por categoria
+resumo_categoria <- resumo_unidade |>
+  group_by(natureza) |>
+  summarise(
+    n_unidades = n(),
+    total_ano = sum(total_ano),
+    media_relativa = mean(media_relativa),
+    .groups = "drop"
+  )
+
+resumo_categoria
+
+# 3. Número em linha
+total_geral_ano <- sum(resumo_unidade$total_ano)
+total_geral_formatado <- format(total_geral_ano, big.mark=".", decimal.mark=",")
+```
+
+## Interpretação do que foi feito
+**1. Tratamento dos meses sem registro:**
+Os valores ausentes (`NA`) foram substituidos por zero utilizando `replace_na()`. Então, a ausência de registro indica zero internações no respectivo mês.
+Essa escolha altera a coluna `total_ano` e `media_relativa`, mas não afeta a contagem das unidades ou identificação de categorias.
+
+**2. Uso do código em linha sem notação científica:** O total geral de internações registradas no ano de 2023 foi de `r format(sum(resumo_unidade$total_ano), big.mark = ".", decimal.mark = ",")`.
+
+# Exercício 5: Todos os anos de uma vez
+O objetivo é empilhar os outros dois arquivos, `internacoes_2024.csv`e `internacoes_2025.csv`, juntos com `internacoes_2023.csv` em uma única tabela. Ao final, deve ser apresentada uma tabela com o total de cada categoria em cada ano.
+
+```{r}
+library(tidyverse)
+library(readr)
+
+# 1. Leitura das tabelas
+tabelas_anuais <- c("dados/internacoes_2023.csv", "dados/internacoes_2024.csv", "dados/internacoes_2025.csv")
+
+tabela_empilhada <- tabelas_anuais |>
+  set_names(tabelas_anuais) |>
+  map(~ read_csv2(
+    file = .x, 
+    locale = locale(decimal_mark = "."),
+    col_types = cols(
+      codigo = col_character(),
+      .default = col_double()
+    ),
+    na = c("", "NA", "-", "NAO-INFORMADO")
+    )) |>
+  list_rbind(names_to = "origem") |>
+  mutate(
+    ano = parse_number(origem)
+  )
+
+tabela_empilhada
+
+# 2. Definição dos níveis dos meses
+meses_nivel <- c("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+
+# 3. Transformação para a forma longa e junção com o cadastro
+tabela_completa <- tabela_empilhada |>
+  select(-origem) |>
+  pivot_longer(
+    cols = jan:dez,
+    names_to = "mes",
+    values_to = "internacoes"
+  ) |>
+  mutate(
+    mes = factor(mes, levels = meses_nivel),
+    internacoes = replace_na(internacoes, 0)
+  ) |>
+  left_join(cadastro, by = "codigo", relationship = "many-to-many") |>
+  mutate(medida_relativa = internacoes/ leitos)
+
+tabela_completa
+
+# 4. Criação da tabela de apresentação
+tabela_apresentacao <- tabela_completa |>
+  group_by(natureza, ano) |>
+  summarise(total_anual = sum(internacoes), .groups = "drop") |>
+  pivot_wider(
+    names_from = ano,
+    values_from = total_anual
+  )
+
+tabela_apresentacao
+
+# 5. Calculo dos totais por ano
+total_2023 <- sum(tabela_completa$internacoes[tabela_completa$ano == 2023])
+total_2024 <- sum(tabela_completa$internacoes[tabela_completa$ano == 2024])
+total_2025 <- sum(tabela_completa$internacoes[tabela_completa$ano == 2025])
+
+# 6. Contando os valores ausentes na tabela empilhada
+n_ausentes_total <- tabela_empilhada |>
+  select(jan:dez) |>
+  is.na() |>
+  sum()
+```
+
+## Análise do que foi pedido na entrega
+A `tabela_completa`, correspondente à "tabela empilhada" pedida, tem `r nrow(tabela_completa)` linhas, que é 3 vezes o número de linhas da tabela do **Exercício 2** (`r nrow(internacoes_longa)`).
+
+Após a análise do período entre 2023 e 2025, observa-se que o ano de `2023` registrou um total de `r format(total_2023, big.mark = ".", decimal.mark = ",")` internações. Em `2024`, o total foi de `r format(total_2024, big.mark = ".", decimal.mark = ",")`, e em `2025` foi `r format(total_2025, big.mark = ".", decimal.mark = ",")`.
+Já em relação aos valores ausentes, tem-se um total de `r n_ausentes_total` nas bases anuais originais, mesmo do `LEIA-ME.txt` (4 em 2023, 2 em 2024 e 3 em 2025).
+

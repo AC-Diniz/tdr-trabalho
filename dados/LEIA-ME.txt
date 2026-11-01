@@ -1,0 +1,29 @@
+Lista 03 --- dados sorteados para o login ac-diniz
+
+Tema: Internações nos hospitais de uma região de saúde
+Unidade de observação: hospital
+
+Arquivos
+
+  internacoes_2023.csv, internacoes_2024.csv, internacoes_2025.csv
+      Uma linha por unidade e uma coluna por mês do ano. A coluna
+      codigo identifica a unidade, e as colunas jan a dez trazem o
+      valor medido: internações no mês.
+      Mês sem registro aparece como "-".
+
+  cadastro.csv
+      Uma linha por unidade, com as colunas:
+        codigo        identificador da unidade, o mesmo das medições
+        nome          nome da unidade
+        natureza      categoria: Público, Filantrópico ou Privado
+        leitos        porte: leitos de internação
+
+Conferência
+
+  unidades no cadastro:   9
+  unidades com medições:  8
+
+  ano    meses sem registro    soma dos valores registrados
+  2023                    4                           69844
+  2024                    2                           70591
+  2025                    3                           67460

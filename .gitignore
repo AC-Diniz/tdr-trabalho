@@ -1,0 +1,31 @@
+# Targets de pipeline
+_targets/
+
+
+# Auxiliares do LaTeX e R
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+.Rhistory
+.RData
+
+# Saídas e relatórios renderizados
+output/
+*.html
+*.pdf
+saidas/
+
+.Rproj.user/
+.Ruserdata
+
+# Arquivos gerados pelo Quarto
+analise.html
+analise_files/
+
+#Sistema operacional
+.DS_Store
+Thumbs.bd

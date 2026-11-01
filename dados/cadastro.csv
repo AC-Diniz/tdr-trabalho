@@ -1,0 +1,10 @@
+codigo;nome;natureza;leitos
+HO01;Hospital de Paranavaí;Público;131
+HO02;Hospital de Maringá;Privado;245
+HO03;Hospital de Lapa;Filantrópico;275
+HO04;Hospital de Guarapuava;Privado;292
+HO05;Hospital de Umuarama;Filantrópico;222
+HO06;Hospital de Ivaiporã;Filantrópico;170
+HO07;Hospital de Telêmaco Borba;Público;281
+HO08;Hospital de Toledo;Privado;115
+HO09;Hospital de Campo Mourão;Público;159
