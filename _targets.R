@@ -36,6 +36,6 @@ list(
   tar_target(tabela_apresentacao, gerar_tabela_apresentacao(tabela_completa)),
   
   # Renderização
-  tar_quarto(relatorio, "analise.qmd")
+  tar_quarto(relatorio, "relatorio.qmd")
 )
 
