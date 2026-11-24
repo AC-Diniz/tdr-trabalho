@@ -1,25 +1,15 @@
-
-# Carregando os pacotes ---------------------------------------------------
-# pacotes do trabalho
-library(readr)
-library(targets)
-library(tarchetypes)
-library(quarto)
-library(renv)
-library(lintr)
-# pacotes da análise (tidyverse)
-library(dplyr)
-library(tidyr)
-library(purrr)
-library(ggplot2)
-
-
 # Função 1: Leitura do cadastro -------------------------------------------
 
 ler_cadastro <- function(caminho) {
   read_csv2(
     file = caminho,
     locale = locale(encoding = "ISO-8859-1"),
+    col_types = cols(
+      codigo = col_character(),
+      nome = col_character(),
+      natureza = col_character(),
+      leitos = col_double()
+    ),
     na = c("", "NA", "N/A")
   )
 }
@@ -40,23 +30,28 @@ ler_internacao <- function(caminho) {
 }
 
 
-# Função 3: Empilhamento, transformação longa, tratamento de NAs e --------
+# Função 3: Empilhamento dos três arquivos anuais --------
 
-processar_internacoes <- function(arq_23, arq_24, arq_25, cadastro) {
+empilhar_internacoes <- function(arq_23, arq_24, arq_25) {
   caminhos <- c(arq_23, arq_24, arq_25)
   names(caminhos) <- caminhos
   
-  tabela_empilhada <- caminhos |>
+  caminhos |>
     map(~ ler_internacao(.x)) |>
     list_rbind(names_to = "origem") |>
     mutate(
       ano = parse_number(origem)
-    )
-  
-  meses_nivel <- c("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+    ) |>
+    select(-origem)
+}
+
+
+# Função 4: Transformação longa, tratamento de NAs e junção ---------------
+
+processar_internacoes <- function(tabela_empilhada, cadastro){
+meses_nivel <- c("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
   
   tabela_completa <- tabela_empilhada |>
-    select(-origem) |>
     pivot_longer(
       cols = janeiro:dezembro,
       names_to = "mes",
@@ -64,29 +59,25 @@ processar_internacoes <- function(arq_23, arq_24, arq_25, cadastro) {
     ) |>
     mutate(
       mes = factor(mes, levels = meses_nivel),
+      registrado = !is.na(internacoes),
       internacoes = replace_na(internacoes, 0)
     ) |>
-    left_join(cadastro, by = "codigo", relationship = "many-to-many") |>
+    left_join(cadastro, by = "codigo", relationship = "many-to-one") |>
     mutate(medida_relativa = internacoes / leitos)
   
   return(tabela_completa)
 }
 
 
-# Função 4: Conferência das linhas, NA e soma por ano ---------------------
+# Função 5: Conferência das linhas, NA e soma por ano ---------------------
 
-gerar_conferencia <- function(arq_23, arq_24, arq_25) {
-  caminhos <- c(arq_23, arq_24, arq_25)
-  names(caminhos) <- caminhos
-  
-  tabela_empilhada <- caminhos |>
-    map(~ ler_internacao(.x)) |>
-    list_rbind(names_to = "origem") |>
-    mutate(ano = parse_number(origem))
-  
+gerar_conferencia <- function(tabela_empilhada) {
   # Métricas de conferência por ano
   resumo_conferencia <- tabela_empilhada |>
-    pivot_longer(cols = jan:dez, names_to = "mes", values_to = "internacoes") |>
+    pivot_longer(
+      cols = janeiro:dezembro, 
+      names_to = "mes", 
+      values_to = "internacoes") |>
     group_by(ano) |>
     summarise(
       n_linhas = n(),
@@ -99,13 +90,13 @@ gerar_conferencia <- function(arq_23, arq_24, arq_25) {
 }
 
 
-# Função 5: Resumo por unidade --------------------------------------------
+# Função 6: Resumo por unidade --------------------------------------------
 
 gerar_resumo_unidade <- function(tabela_completa) {
   tabela_completa |>
     group_by(codigo, nome, natureza) |>
     summarise(
-      meses_registro = sum(internacoes >= 0),
+      meses_registro = sum(registrado),
       total_ano = sum(internacoes),
       media_relativa = mean(medida_relativa),
       .groups = "drop"
@@ -114,7 +105,7 @@ gerar_resumo_unidade <- function(tabela_completa) {
 }
 
 
-# Função 6: Resumo por categoria ------------------------------------------
+# Função 7: Resumo por categoria ------------------------------------------
 
 gerar_resumo_categoria <- function(resumo_unidade) {
   resumo_unidade |>
@@ -128,7 +119,7 @@ gerar_resumo_categoria <- function(resumo_unidade) {
 }
 
 
-# Função 7: Tabela de apresentação por categoria e ano --------------------
+# Função 8: Tabela de apresentação por categoria e ano --------------------
 
 gerar_tabela_apresentacao <- function(tabela_completa) {
   tabela_completa |>
