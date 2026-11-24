@@ -70,19 +70,22 @@ meses_nivel <- c("janeiro", "fevereiro", "março", "abril", "maio", "junho", "ju
 # Função 5: Conferência das linhas, NA e soma por ano ---------------------
 
 gerar_conferencia <- function(tabela_empilhada) {
-  # Métricas de conferência por ano
-  resumo_conferencia <- tabela_empilhada |>
+  linhas <- tabela_empilhada |>
+    count(ano, name = "n_linhas")
+  
+  tabela_empilhada |>
     pivot_longer(
-      cols = janeiro:dezembro, 
-      names_to = "mes", 
-      values_to = "internacoes") |>
+      cols = janeiro:dezembro,
+      names_to = "mes",
+      values_to = "internacoes"
+    ) |>
     group_by(ano) |>
     summarise(
-      n_linhas = n(),
       meses_sem_registro = sum(is.na(internacoes)),
       soma_internacoes = sum(internacoes, na.rm = TRUE),
       .groups = "drop"
-    )
+    ) |>
+    left_join(linhas, by = "ano")
 }
 
 
