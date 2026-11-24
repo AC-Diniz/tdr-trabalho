@@ -64,8 +64,6 @@ meses_nivel <- c("janeiro", "fevereiro", "março", "abril", "maio", "junho", "ju
     ) |>
     left_join(cadastro, by = "codigo", relationship = "many-to-one") |>
     mutate(medida_relativa = internacoes / leitos)
-  
-  return(tabela_completa)
 }
 
 
@@ -85,8 +83,6 @@ gerar_conferencia <- function(tabela_empilhada) {
       soma_internacoes = sum(internacoes, na.rm = TRUE),
       .groups = "drop"
     )
-  
-  return(resumo_conferencia)
 }
 
 
@@ -130,3 +126,4 @@ gerar_tabela_apresentacao <- function(tabela_completa) {
       values_from = total_anual
     )
 }
+
