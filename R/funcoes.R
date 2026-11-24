@@ -15,7 +15,7 @@ ler_cadastro <- function(caminho) {
 }
 
 
-# Função 2: Leitura de uma arquivo anual de internações -------------------
+# Função 2: Leitura de um arquivo anual de internações --------------------
 
 ler_internacao <- function(caminho) {
   read_csv2(
@@ -30,35 +30,45 @@ ler_internacao <- function(caminho) {
 }
 
 
-# Função 3: Empilhamento dos três arquivos anuais --------
+# Função 3: Empilhamento dos três arquivos anuais -------------------------
 
 empilhar_internacoes <- function(arq_23, arq_24, arq_25) {
-  caminhos <- c(arq_23, arq_24, arq_25)
-  names(caminhos) <- caminhos
+  # O ano vem do nome dado a cada caminho, e não do texto do caminho
+  caminhos <- c(`2023` = arq_23, `2024` = arq_24, `2025` = arq_25)
   
   caminhos |>
-    map(~ ler_internacao(.x)) |>
-    list_rbind(names_to = "origem") |>
-    mutate(
-      ano = parse_number(origem)
-    ) |>
-    select(-origem)
+    map(ler_internacao) |>
+    list_rbind(names_to = "ano") |>
+    mutate(ano = as.integer(ano))
 }
 
 
 # Função 4: Transformação longa, tratamento de NAs e junção ---------------
 
-processar_internacoes <- function(tabela_empilhada, cadastro){
-meses_nivel <- c("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+processar_internacoes <- function(tabela_empilhada, cadastro) {
+  # Os arquivos usam os meses abreviados (jan, fev, ...); o fator guarda a
+  # ordem do calendário e mostra o nome completo no relatório
+  meses_nivel <- c(
+    "jan", "fev", "mar", "abr", "mai", "jun",
+    "jul", "ago", "set", "out", "nov", "dez"
+  )
+  meses_nome <- c(
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+  )
   
-  tabela_completa <- tabela_empilhada |>
+  tabela_empilhada |>
     pivot_longer(
-      cols = janeiro:dezembro,
+      cols = jan:dez,
       names_to = "mes",
       values_to = "internacoes"
     ) |>
     mutate(
-      mes = factor(mes, levels = meses_nivel),
+      mes = factor(mes, levels = meses_nivel, labels = meses_nome),
+      # Decisão sobre meses sem registro (Exercício 4 da Lista 03):
+      # o mês ausente (NA) vira 0 internações, e a coluna `registrado`
+      # guarda que ele não tinha registro. Isso reduz `medida_relativa`
+      # das unidades com ausência, mas não altera as somas.
       registrado = !is.na(internacoes),
       internacoes = replace_na(internacoes, 0)
     ) |>
@@ -70,12 +80,13 @@ meses_nivel <- c("janeiro", "fevereiro", "março", "abril", "maio", "junho", "ju
 # Função 5: Conferência das linhas, NA e soma por ano ---------------------
 
 gerar_conferencia <- function(tabela_empilhada) {
+  # Linhas de cada arquivo anual, contadas antes do formato longo
   linhas <- tabela_empilhada |>
     count(ano, name = "n_linhas")
   
   tabela_empilhada |>
     pivot_longer(
-      cols = janeiro:dezembro,
+      cols = jan:dez,
       names_to = "mes",
       values_to = "internacoes"
     ) |>
@@ -85,19 +96,22 @@ gerar_conferencia <- function(tabela_empilhada) {
       soma_internacoes = sum(internacoes, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    left_join(linhas, by = "ano")
+    left_join(linhas, by = "ano") |>
+    # A ordem das colunas é a que o relatório.qmd usa em col.names
+    select(ano, n_linhas, meses_sem_registro, soma_internacoes)
 }
 
 
 # Função 6: Resumo por unidade --------------------------------------------
 
+# Atenção: soma os três anos (2023 a 2025) de cada unidade.
 gerar_resumo_unidade <- function(tabela_completa) {
   tabela_completa |>
     group_by(codigo, nome, natureza) |>
     summarise(
       meses_registro = sum(registrado),
       total_ano = sum(internacoes),
-      media_relativa = mean(medida_relativa),
+      media_relativa = mean(medida_relativa, na.rm = TRUE),
       .groups = "drop"
     ) |>
     arrange(desc(media_relativa))
@@ -130,6 +144,7 @@ gerar_tabela_apresentacao <- function(tabela_completa) {
     )
 }
 
+
 # Função 9: Média da medida relativa por ano e mês ------------------------
 
 gerar_sazonalidade_ano_mes <- function(tabela_completa) {
@@ -141,6 +156,7 @@ gerar_sazonalidade_ano_mes <- function(tabela_completa) {
     )
 }
 
+
 # Função 10: Média da medida relativa por mês -----------------------------
 
 gerar_resumo_mes <- function(tabela_completa) {
@@ -151,6 +167,7 @@ gerar_resumo_mes <- function(tabela_completa) {
       .groups = "drop"
     )
 }
+
 
 # Função 11: Indicadores por ano ------------------------------------------
 
