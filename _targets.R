@@ -37,6 +37,14 @@ list(
   tar_target(resumo_categoria, gerar_resumo_categoria(resumo_unidade)),
   tar_target(tabela_apresentacao, gerar_tabela_apresentacao(tabela_completa)),
   
+  # Tabelas e números usados no relatório
+  tar_target(
+    sazonalidade_ano_mes,
+    gerar_sazonalidade_ano_mes(tabela_completa)
+  ),
+  tar_target(resumo_mes, gerar_resumo_mes(tabela_completa)),
+  tar_target(resumo_ano, gerar_resumo_ano(tabela_completa)),
+  
   # Renderização
   tar_quarto(relatorio, "relatorio.qmd")
 )
