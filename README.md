@@ -1,7 +1,3 @@
-------------------------------------------------------------------------
-
-editor_options: markdown: wrap: 72 ---
-
 # Trabalho Intermediário - TDR
 
 ## Sobre o projeto
@@ -19,7 +15,7 @@ Para este projeto, foram utilizados os arquivos `internacoes_2023.csv`, `interna
 - `_targets.R`: Script de configuração e definição do pipeline de dados e relatórios;
 - `R/`: pasta com as funções utilizadas no projeto;
 - `relatorio.qmd`: documento Quarto que gera o relatório final;
-- `rev.lock` e `.Rprofile`: arquivos de controle de versões e dependências do ambiente R;
+- `renv.lock` e `.Rprofile`: arquivos de controle de versões e dependências do ambiente R;
 - `.github/workflows/relatorio.yaml`: integração contínua no GitHub Actions;
 - `.lintr`: configurações do estilo do projeto
 
@@ -33,7 +29,7 @@ Para a executar o projeto localmente, precisa de:
 
 ``` 
 sudo apt-get update
-sudo apt-get install -y cmake libglpk-dev libuv1-dev libml2-dev make pandoc
+sudo apt-get install -y cmake libglpk-dev libuv1-dev libxml2-dev make pandoc
 ```
 ## Como reproduzir o projeto
 1. Clonar o repositório no ramo correto (`trabalho`):
