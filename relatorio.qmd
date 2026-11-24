@@ -24,7 +24,13 @@ library(tidyr)
 library(knitr)
 
 # Carregando os alvos do taregts
-tar_load(c(conferencia, resumo_unidade, resumo_categoria, tabela_apresentacao, tabela_completa, cadastro))
+tar_load(c(
+  conferencia, resumo_unidade,
+  resumo_categoria,
+  tabela_apresentacao,
+  tabela_completa, 
+  cadastro
+  ))
 
 ```
 
@@ -40,7 +46,9 @@ A unidade sem medição identificada (`r anti_join(cadastro, tabela_completa, by
 
 conferencia |>
   knitr::kable(
-    col.names = c("Ano", "Número de Linhas", "Meses sem Registro", "Soma de Internações")
+    col.names = c(
+      "Ano", "Número de Linhas",
+      "Meses sem Registro", "Soma de Internações")
   )
 
 ```
@@ -56,7 +64,9 @@ A análise da sazonalidade permite a observação do comportamento médio das in
 
 tabela_completa |>
   group_by(ano, mes) |>
-  summarise(media_mensal = mean(medida_relativa, na.rm = TRUE), .groups = "drop") |>
+  summarise(
+    media_mensal = mean(medida_relativa, na.rm = TRUE),
+    .groups = "drop") |>
   ggplot(aes(x = mes, y = media_mensal, group = ano, color = factor(ano))) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
@@ -73,7 +83,9 @@ tabela_completa |>
 # Calculando a maior e menor média
 resumo_mes <- tabela_completa |>
   group_by(mes) |>
-  summarise(media = mean(medida_relativa, na.rm = TRUE), .groups = "drop")
+  summarise(
+    media = mean(medida_relativa, na.rm = TRUE),
+    .groups = "drop")
 
 mes_maior <- resumo_mes |>
   filter(media == max(media)) |>
@@ -86,7 +98,7 @@ mes_menor <- resumo_mes |>
 
 
 
-Como ilustrado no @fig-sazonalidade, o `r mes_maior` apresenta a maior média global da medida relativa, enquanto o mês `r mes_menor` registra a menor média do período.
+Como ilustrado na @fig-sazonalidade, o `r mes_maior` apresenta a maior média global da medida relativa, enquanto o mês `r mes_menor` registra a menor média do período.
 
 
 # Variações entre 2023 e 2025
@@ -105,7 +117,8 @@ tabela_completa |>
     media_relativa = round(mean(medida_relativa, na.rm = TRUE), 2)
   ) |>
   knitr::kable(
-    col.names = c("Natureza", "Nº de Unidades", "Total de Internações", "Média Relativa")
+    col.names = c(
+      "Natureza", "Nº de Unidades", "Total de Internações", "Média Relativa")
   )
 
 ```
@@ -209,7 +222,8 @@ resumo_unidade |>
     media_relativa = round(media_relativa, 2)
   ) |>
   knitr::kable(
-    col.names = c("Código", "Nome da Unidade", "Natureza", "Meses com Registro", "Total do Ano", "Média Relativa")
+    col.names = c(
+      "Código", "Nome da Unidade", "Natureza", "Meses com Registro", "Total do Ano", "Média Relativa")
   )
 
 ```
