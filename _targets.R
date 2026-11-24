@@ -10,7 +10,7 @@ source("R/funcoes.R")
 
 # Declarando os pacotes que as funções usam
 tar_option_set(
-  packages = c("readr", "dplyr", "tidyr", "purrr", "targets", "tarchetypes", "renv", "lintr", "ggplot2")
+  packages = c("readr", "dplyr", "tidyr", "purrr")
 )
 
 list(
