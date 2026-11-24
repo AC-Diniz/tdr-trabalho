@@ -1,9 +1,9 @@
 ---
 title: "Relatório de Internações"
-subtitle: "Internações nos hospitais de uma região de saúde (unidade de observação: hospital)"
+subtitle: "Internações nos hospitais de uma região de saúde Unidade de observação: hospital"
 author: Ananda Cristina Diniz
 lang: pt-BR
-format:
+format: 
   html:
     embed-resources: true
     code-fold: false
@@ -20,88 +20,43 @@ execute:
 library(targets)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
+library(knitr)
 
-# Carregando os alvos do targets
-# Um alvo por chamada: é assim que o tar_quarto() detecta as dependências
-tar_load(conferencia)
-tar_load(resumo_unidade)
-tar_load(resumo_categoria)
-tar_load(tabela_apresentacao)
-tar_load(tabela_completa)
-tar_load(cadastro)
-tar_load(resumo_mes)
-tar_load(resumo_ano)
-tar_load(sazonalidade_ano_mes)
+# Carregando os alvos do taregts
+tar_load(c(conferencia, resumo_unidade, resumo_categoria, tabela_apresentacao, tabela_completa, cadastro))
 
-# Número com vírgula decimal e ponto como separador de milhar
-fmt <- function(x, digitos = 2) {
-  format(round(x, digitos), big.mark = ".", decimal.mark = ",",
-         nsmall = digitos, trim = TRUE)
-}
-
-# Primeiro e último ano da base
-ano_ini <- min(resumo_ano$ano)
-ano_fim <- max(resumo_ano$ano)
 ```
 
-```{r}
-# Unidade do cadastro sem nenhuma medição
-sem_medicao <- cadastro |>
-  anti_join(tabela_completa, by = "codigo") |>
-  pull(codigo)
-
-# Efeito da decisão sobre meses sem registro na média da unidade HO06
-ho06 <- tabela_completa |>
-  filter(codigo == "HO06")
-
-meses_sem_reg_ho06 <- sum(!ho06$registrado)
-media_com_zero <- mean(ho06$medida_relativa)
-media_sem_zero <- mean(ho06$medida_relativa[ho06$registrado])
-```
 
 # Dados
+Os dados utilizados para essa análise são referentes a internações hospitalares de uma determinada região de saúde específica. O cadastro de unidades é composto por `r nrow(cadastro)` hospitais distribuidos entre as naturezas pública, filantrópica e privada.
 
-Os dados utilizados nesta análise são simulados e foram sorteados para o meu login. Eles se referem às internações hospitalares de uma região de saúde específica, entre `r ano_ini` e `r ano_fim`. O cadastro de unidades é composto por `r nrow(cadastro)` hospitais distribuídos entre as naturezas pública, filantrópica e privada.
-
-A unidade sem medição identificada (`r paste(sem_medicao, collapse = ", ")`) no cadastro corresponde a um hospital que não registrou atividade no período avaliado. A @tbl-conferencia confere a integridade das bases anuais, com os números a serem comparados com o documento `LEIA-ME.txt`.
+A unidade sem medição identificada no cadastro corresponde a um hospital que não registrou atividade no período avaliado. A tabela de conferência abaixo faz a validação da integridade dos dados em comparação com o documento `LEIA-ME.txt`.
 
 ```{r}
 #| label: tbl-conferencia
-#| tbl-cap: "Conferência das bases anuais de internações: linhas, meses sem registro e soma de internações por ano"
+#| tbl-cap: "Tabela de conferência das bases anuais de internações"
 
 conferencia |>
   knitr::kable(
-    col.names = c(
-      "Ano", "Número de Linhas",
-      "Meses sem Registro", "Soma de Internações"),
-    format.args = list(decimal.mark = ",")
+    col.names = c("Ano", "Número de Linhas", "Meses sem Registro", "Soma de Internações")
   )
+
 ```
 
-**Tratamento dos meses sem registro:** os meses sem registro (marcados como `-` ou `NA` nos arquivos) foram substituídos por zero, uma convenção que representa a falta de registro, e não necessariamente um mês sem internações. A informação de que o mês estava ausente foi mantida em uma coluna à parte. Essa escolha reduz a média por leito das unidades com ausência: no hospital HO06, que tem `r meses_sem_reg_ho06` meses sem registro, a média relativa é `r fmt(media_com_zero)` com a substituição por zero e `r fmt(media_sem_zero)` quando esses meses são descartados. A escolha não afeta o número de unidades, a identificação das categorias nem os totais de internações, pois somar zero ou descartar o mês dá o mesmo resultado.
+**Tratamento dos valores ausentes:** Os meses sem registros (identificados como `-` ou `NA`) foram substituídos por zero (`0`), assumindo que a ausência de notificação equibale a zero internações no respectivo mês. Essa escolha altera a coluna `total_ano` e `media_relativa`, mas não afeta a contagem das unidades ou identificação de categorias.
 
 # Sazonalidade
-
-```{r}
-# Meses de maior e de menor média global
-mes_maior <- resumo_mes |>
-  filter(media == max(media)) |>
-  pull(mes) |>
-  as.character()
-
-mes_menor <- resumo_mes |>
-  filter(media == min(media)) |>
-  pull(mes) |>
-  as.character()
-```
-
-A @fig-sazonalidade mostra o comportamento médio da medida relativa (internações por leito) ao longo dos meses do ano, com uma linha para cada ano. O mês de `r mes_maior` apresenta a maior média global da medida relativa, enquanto o mês de `r mes_menor` registra a menor média do período.
+A análise da sazonalidade permite a observação do comportamento médio das internações ao longo dos meses do ano.
 
 ```{r}
 #| label: fig-sazonalidade
 #| fig-cap: "Evolução mensal da média da medida relativa por ano"
 
-sazonalidade_ano_mes |>
+tabela_completa |>
+  group_by(ano, mes) |>
+  summarise(media_mensal = mean(medida_relativa, na.rm = TRUE), .groups = "drop") |>
   ggplot(aes(x = mes, y = media_mensal, group = ano, color = factor(ano))) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
@@ -111,49 +66,92 @@ sazonalidade_ano_mes |>
     color = "Ano"
   ) +
   theme_minimal()
+
 ```
 
-# Variação entre 2023 e 2025
+```{r}
+# Calculando a maior e menor média
+resumo_mes <- tabela_completa |>
+  group_by(mes) |>
+  summarise(media = mean(medida_relativa, na.rm = TRUE), .groups = "drop")
 
-A @tbl-resumo-ano traz, para cada ano de `r ano_ini` a `r ano_fim`, o número de unidades, os meses sem registro, o total de internações e a média da medida relativa.
+mes_maior <- resumo_mes |>
+  filter(media == max(media)) |>
+  pull(mes)
+mes_menor <- resumo_mes |>
+  filter(media == min(media)) |>
+  pull(mes)
+
+```
+
+
+
+Como ilustrado no @fig-sazonalidade, o `r mes_maior` apresenta a maior média global da medida relativa, enquanto o mês `r mes_menor` registra a menor média do período.
+
+
+# Variações entre 2023 e 2025
+Para avaliar a evolução temporal do período, as tabelas detalham o panorama de internações e a medida relativa para cada ano (2023 e 2025)
 
 ```{r}
-#| label: tbl-resumo-ano
-#| tbl-cap: "Indicadores por ano: unidades, meses sem registro, total de internações e média relativa"
+#| label: tbl-2023
+#| tbl-cap: "Indicadores por categoria em 2023"
 
-resumo_ano |>
-  mutate(media_relativa = round(media_relativa, 2)) |>
+tabela_completa |>
+  filter(ano == 2023) |>
+  group_by(natureza) |>
+  summarise(
+    unidades = n_distinct(codigo),
+    total_internacoes = sum(internacoes, na.rm = TRUE),
+    media_relativa = round(mean(medida_relativa, na.rm = TRUE), 2)
+  ) |>
   knitr::kable(
-    col.names = c(
-      "Ano", "Nº de Unidades", "Meses sem Registro",
-      "Total de Internações", "Média Relativa"
-    ),
-    format.args = list(decimal.mark = ",")
+    col.names = c("Natureza", "Nº de Unidades", "Total de Internações", "Média Relativa")
   )
+
 ```
 
 ```{r}
-# Variação percentual da média entre o primeiro e o último ano
-media_ini <- resumo_ano |>
-  filter(ano == ano_ini) |>
-  pull(media_relativa)
+#| label: tbl-2025
+#| tbl-cap: "Indicadores por categoria em 2025"
 
-media_fim <- resumo_ano |>
-  filter(ano == ano_fim) |>
-  pull(media_relativa)
+tabela_completa |>
+  filter(ano == 2025) |>
+  group_by(natureza) |>
+  summarise(
+    unidades = n_distinct(codigo),
+    total_internacoes = sum(internacoes, na.rm = TRUE),
+    media_relativa = round(mean(medida_relativa, na.rm = TRUE), 2)
+  ) |>
+  knitr::kable(
+    col.names = c("Natureza", "Nº de Unidades", "Total de Internações", "Média Relativa")
+  )
 
-variacao_perc <- (media_fim - media_ini) / media_ini * 100
 ```
 
-Entre o primeiro ano (`r ano_ini`) e o último (`r ano_fim`), a média da medida relativa apresentou uma variação percentual de `r fmt(variacao_perc)`%. A comparação usa a média da medida relativa, e não o total de internações, porque o total depende do porte dos hospitais e dos meses sem registro. A média por leito coloca todos os hospitais na mesma escala e mostra como a carga de atendimento mudou ao longo do tempo.
+```{r}
+# Calculando a variação percentual
+media_2023 <- tabela_completa |>
+  filter(ano == 2023) |>
+  summarise(m = mean(medida_relativa, na.rm = TRUE)) |>
+  pull(m)
+
+media_2025 <- tabela_completa |>
+  filter(ano == 2025) |>
+  summarise(m = mean(medida_relativa, na.rm = TRUE)) |>
+  pull(m)
+
+variacao_perc <- ((media_2025 - media_2023) / media_2023) * 100
+
+```
+
+Entre o primeiro ano (2023) e o último (2025), a média da medida relativa apresentou uma variação percentual de `r round(variacao_perc, 2)`%. A comparação usa a média da medida relativa em vez do total absoluto porque a média pondera adequadamente a taxa por leito, permitindo uma comparação de todos os hospitais em igualdade de condições, mostrando de forma justa como a carga de atendimento realmente mudou ao longo do tempo.
 
 # Diferenças entre categorias
-
-As unidades hospitalares têm naturezas distintas, o que influencia a carga de internações por leito. A @fig-categorias compara a distribuição da medida relativa entre as categorias, e a @tbl-resumo-cat resume as médias de cada uma.
+As unidades hospitalares têm naturezas distintas, o que impacta a distribuição da carga de internações por leito ao longo do período analisado.
 
 ```{r}
 #| label: fig-categorias
-#| fig-cap: "Distribuição da medida relativa (internações por leito) por categoria hospitalar"
+#| fig-cap: "Distribuição da medida relativa por categoria hospitalar"
 
 tabela_completa |>
   ggplot(aes(x = natureza, y = medida_relativa, fill = natureza)) +
@@ -164,22 +162,24 @@ tabela_completa |>
   ) +
   theme_minimal() +
   theme(legend.position = "none")
-```
+
+``` 
 
 ```{r}
 #| label: tbl-resumo-cat
-#| tbl-cap: "Número de unidades, total de internações no período e média da medida relativa por categoria hospitalar"
+#| tbl-cap: "Resumo das médias da medida relativa por categoria hospitalar"
 
-resumo_categoria |>
+tabela_resumo_cat <- resumo_categoria |>
   mutate(
-    total_ano = format(total_ano, big.mark = ".", decimal.mark = ",", trim = TRUE),
+    total_ano = format(total_ano, big.mark = ".", decimal.mark = ","),
     media_relativa = round(media_relativa, 2)
-  ) |>
-  knitr::kable(
-    col.names = c(
-      "Natureza", "Nº de Unidades", "Total no Período", "Média Relativa"),
-    format.args = list(decimal.mark = ",")
   )
+
+tabela_resumo_cat|>
+  knitr::kable(
+    col.names = c("Natureza", "Nº de Unidades", "Total Anual", "Média Relativa")
+  )
+
 ```
 
 ```{r}
@@ -190,45 +190,43 @@ cat_maior <- resumo_categoria |>
 cat_menor <- resumo_categoria |>
   filter(media_relativa == min(media_relativa)) |>
   pull(natureza)
+
 ```
 
-Como mostram a @fig-categorias e a @tbl-resumo-cat, a categoria `r cat_maior` apresenta a maior média da medida relativa entre as unidades, enquanto a categoria `r cat_menor` registra a menor média.
+Como mostra a @fig-sazonalidade e a @tbl-resumo-cat, observa-se que a categoria `r cat_maior` apresenta a maior média da medida relativa entre as unidades, enquanto a categoria `r cat_menor` registra a menor média.
 
 # As tabelas da Lista 03
-
-A @tbl-resumo-unidade apresenta os indicadores consolidados de cada unidade, e a @tbl-tabela-apresentacao, o total de internações por categoria e ano. No período de `r ano_ini` a `r ano_fim`, foram registradas `r fmt(sum(resumo_unidade$total_ano), 0)` internações na região.
+Agora serão apresentados os indicadores consolidados por unidade hospitalar e o panorama geral da região. O total geral de internações registradas no ano base de 2023 foi de `r format(sum(resumo_unidade$total_ano), big.mark = ".", decimal.mark = ",")`.
 
 ## Desempenho por unidade
-
 ```{r}
 #| label: tbl-resumo-unidade
-#| tbl-cap: "Desempenho consolidado por unidade hospitalar: meses com registro, total de internações no período e média relativa"
+#| tbl-cap: "Desempenho consolidado por unidade hospitalar"
 
 resumo_unidade |>
   mutate(
-    total_ano = format(total_ano, big.mark = ".", decimal.mark = ",", trim = TRUE),
+    total_ano = format(total_ano, big.mark = ".", decimal.mark = ","),
     media_relativa = round(media_relativa, 2)
   ) |>
   knitr::kable(
-    col.names = c(
-      "Código", "Nome da Unidade", "Natureza", "Meses com Registro",
-      "Total no Período", "Média Relativa"),
-    format.args = list(decimal.mark = ",")
+    col.names = c("Código", "Nome da Unidade", "Natureza", "Meses com Registro", "Total do Ano", "Média Relativa")
   )
+
 ```
 
 ## Desempenho por categoria e ano
-
 ```{r}
 #| label: tbl-tabela-apresentacao
-#| tbl-cap: "Total de internações por categoria hospitalar e ano"
+#| tbl-cap: "Total de internações por categoria e ano (2023 a 2025)"
 
-tab_apresentacao <- tabela_apresentacao |>
-  mutate(across(
-    where(is.numeric),
-    ~ format(.x, big.mark = ".", decimal.mark = ",", trim = TRUE)
-  ))
-
-tab_apresentacao |>
-  knitr::kable(col.names = c("Natureza", names(tab_apresentacao)[-1]))
+tabela_apresentacao |>
+  mutate(
+    `2023` = format(`2023`, big.mark = ".", decimal.mark = ","),
+    `2024` = format(`2024`, big.mark = ".", decimal.mark = ","),
+    `2025` = format(`2025`, big.mark = ".", decimal.mark = ",")
+  ) |>
+  knitr::kable(
+    col.names = c("Natureza", "2023", "2024", "2025")
+  )
 ```
+

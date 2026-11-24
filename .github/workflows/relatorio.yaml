@@ -18,9 +18,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake libglpk-dev libuv1-dev \
-            libxml2-dev make pandoc libfontconfig1-dev \
-            libfreetype6-dev libfribidi-dev libharfbuzz-dev \
-            libtiff-dev libwebp-dev libx11-devs
+            libxml2-dev make pandoc
 
       - uses: quarto-dev/quarto-actions/setup@v2
 

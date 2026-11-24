@@ -4,6 +4,7 @@
 library(targets)
 library(tarchetypes)
 
+
 # Carregando as funções do R/ ---------------------------------------------
 
 source("R/funcoes.R")
@@ -23,27 +24,16 @@ list(
   # Leitura do cadastro
   tar_target(cadastro, ler_cadastro(arq_cadastro)),
   
-  # Leitura e empilhamento dos três ano
-  tar_target(internacoes_empilhadas, empilhar_internacoes(arq_2023, arq_2024, arq_2025)),
-  
   # Tabela completa (empilahda e unida ao cadastro)
-  tar_target(tabela_completa, processar_internacoes(internacoes_empilhadas, cadastro)),
+  tar_target(tabela_completa, processar_internacoes(arq_2023, arq_2024, arq_2025, cadastro)),
   
   # Comparando com o LEIAME.txt
-  tar_target(conferencia, gerar_conferencia(internacoes_empilhadas)),
+  tar_target(conferencia, gerar_conferencia(arq_2023, arq_2024, arq_2025)),
   
   # Resumos e tabelas de análise
   tar_target(resumo_unidade, gerar_resumo_unidade(tabela_completa)),
   tar_target(resumo_categoria, gerar_resumo_categoria(resumo_unidade)),
   tar_target(tabela_apresentacao, gerar_tabela_apresentacao(tabela_completa)),
-  
-  # Tabelas e números usados no relatório
-  tar_target(
-    sazonalidade_ano_mes,
-    gerar_sazonalidade_ano_mes(tabela_completa)
-  ),
-  tar_target(resumo_mes, gerar_resumo_mes(tabela_completa)),
-  tar_target(resumo_ano, gerar_resumo_ano(tabela_completa)),
   
   # Renderização
   tar_quarto(relatorio, "relatorio.qmd")
