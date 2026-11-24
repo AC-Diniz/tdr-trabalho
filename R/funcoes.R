@@ -53,12 +53,12 @@ processar_internacoes <- function(arq_23, arq_24, arq_25, cadastro) {
       ano = parse_number(origem)
     )
   
-  meses_nivel <- c("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+  meses_nivel <- c("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
   
   tabela_completa <- tabela_empilhada |>
     select(-origem) |>
     pivot_longer(
-      cols = jan:dez,
+      cols = janeiro:dezembro,
       names_to = "mes",
       values_to = "internacoes"
     ) |>
