@@ -127,3 +127,38 @@ gerar_tabela_apresentacao <- function(tabela_completa) {
     )
 }
 
+# Função 9: Média da medida relativa por ano e mês ------------------------
+
+gerar_sazonalidade_ano_mes <- function(tabela_completa) {
+  tabela_completa |>
+    group_by(ano, mes) |>
+    summarise(
+      media_mensal = mean(medida_relativa, na.rm = TRUE),
+      .groups = "drop"
+    )
+}
+
+# Função 10: Média da medida relativa por mês -----------------------------
+
+gerar_resumo_mes <- function(tabela_completa) {
+  tabela_completa |>
+    group_by(mes) |>
+    summarise(
+      media = mean(medida_relativa, na.rm = TRUE),
+      .groups = "drop"
+    )
+}
+
+# Função 11: Indicadores por ano ------------------------------------------
+
+gerar_resumo_ano <- function(tabela_completa) {
+  tabela_completa |>
+    group_by(ano) |>
+    summarise(
+      unidades = n_distinct(codigo),
+      meses_sem_registro = sum(!registrado),
+      total_internacoes = sum(internacoes),
+      media_relativa = mean(medida_relativa, na.rm = TRUE),
+      .groups = "drop"
+    )
+}
