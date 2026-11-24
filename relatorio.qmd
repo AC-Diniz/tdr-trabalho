@@ -32,7 +32,7 @@ tar_load(c(conferencia, resumo_unidade, resumo_categoria, tabela_apresentacao, t
 # Dados
 Os dados utilizados para essa análise são referentes a internações hospitalares de uma determinada região de saúde específica. O cadastro de unidades é composto por `r nrow(cadastro)` hospitais distribuidos entre as naturezas pública, filantrópica e privada.
 
-A unidade sem medição identificada no cadastro corresponde a um hospital que não registrou atividade no período avaliado. A tabela de conferência abaixo faz a validação da integridade dos dados em comparação com o documento `LEIA-ME.txt`.
+A unidade sem medição identificada (`r anti_join(cadastro, tabela_completa, by ="codigo"`) no cadastro corresponde a um hospital que não registrou atividade no período avaliado. A tabela de conferência abaixo faz a validação da integridade dos dados em comparação com o documento `LEIA-ME.txt`. Os dados utilizados são simulados, sorteados para login pessoal.
 
 ```{r}
 #| label: tbl-conferencia
@@ -45,7 +45,7 @@ conferencia |>
 
 ```
 
-**Tratamento dos valores ausentes:** Os meses sem registros (identificados como `-` ou `NA`) foram substituídos por zero (`0`), assumindo que a ausência de notificação equibale a zero internações no respectivo mês. Essa escolha altera a coluna `total_ano` e `media_relativa`, mas não afeta a contagem das unidades ou identificação de categorias.
+**Tratamento dos valores ausentes:** Os meses sem registros (identificados como `-` ou `NA`) foram substituídos por zero (`0`), assumindo que a ausência de notificação equivale a um mês sem registro, e não necessariamente a um mês sem internações. Essa escolha altera a coluna `media_relativa` (a do HO06, que cai de 4,13 para 3,67), mas não afeta a contagem das unidades ou identificação de categorias, nem a coluna `total_ano`, uma vez que somar zero ou descartar o mês retorna o mesmo resultado.
 
 # Sazonalidade
 A análise da sazonalidade permite a observação do comportamento médio das internações ao longo dos meses do ano.
