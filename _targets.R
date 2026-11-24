@@ -4,14 +4,13 @@
 library(targets)
 library(tarchetypes)
 
-
 # Carregando as funções do R/ ---------------------------------------------
 
 source("R/funcoes.R")
 
 # Declarando os pacotes que as funções usam
 tar_option_set(
-  packages = c("readr", "dplyr", "tidyr", "purrr")
+  packages = c("readr", "dplyr", "tidyr", "purrr", "targets", "tarchetypes", "renv", "lintr", "ggplot2")
 )
 
 list(
@@ -23,6 +22,9 @@ list(
   
   # Leitura do cadastro
   tar_target(cadastro, ler_cadastro(arq_cadastro)),
+  
+  # Leitura e empilhamento dos três ano
+  tar_target(internacoes_empilhadas, empilhar_internacoes(arq_2023, arq_2024, arq_2025)),
   
   # Tabela completa (empilahda e unida ao cadastro)
   tar_target(tabela_completa, processar_internacoes(arq_2023, arq_2024, arq_2025, cadastro)),
