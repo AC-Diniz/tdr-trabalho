@@ -27,10 +27,10 @@ list(
   tar_target(internacoes_empilhadas, empilhar_internacoes(arq_2023, arq_2024, arq_2025)),
   
   # Tabela completa (empilahda e unida ao cadastro)
-  tar_target(tabela_completa, processar_internacoes(arq_2023, arq_2024, arq_2025, cadastro)),
+  tar_target(tabela_completa, processar_internacoes(internacoes_empilhadas, cadastro)),
   
   # Comparando com o LEIAME.txt
-  tar_target(conferencia, gerar_conferencia(arq_2023, arq_2024, arq_2025)),
+  tar_target(conferencia, gerar_conferencia(internacoes_empilhadas)),
   
   # Resumos e tabelas de análise
   tar_target(resumo_unidade, gerar_resumo_unidade(tabela_completa)),
